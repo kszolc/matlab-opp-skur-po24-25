@@ -1,36 +1,104 @@
 function kinematykaOdwrotna()
+clear;
+clc;
+close all;
 
-    clear;
-    clc;
-    close all;
+% Definicja punktów startowego i końcowego w przestrzeni (x,y,z)
+startPoint = dynamicWorkspaceInput("Punkt początkowy", 130.85, 0, 75);
+endPoint   = dynamicWorkspaceInput("Punkt końcowy", -930.85, 0, 1975);
 
+% Wywołanie rysowania przestrzeni roboczej robota 
+przestrzen_robocza;
 
-    % Definicja punktów startowego i końcowego w przestrzeni (x,y,z)
-    start_point = dynamicWorkspaceInput("Punkt początkowy",130.85,0,75)
-    end_point   = dynamicWorkspaceInput("Punkt końcowy",-930.85,0,1975)
+% Włączenie "hold on" aby dodać nowe elementy do istniejącego wykresu
+hold on;
 
+% Rysowanie punktów startowego (zielony punkt) i końcowego (niebieski punkt)
+scatter3(startPoint(1), startPoint(2), startPoint(3), 50, 'g', 'filled'); 
+scatter3(endPoint(1), endPoint(2), endPoint(3), 50, 'b', 'filled');
 
+% Opcjonalne: dodanie legendy, opisów osi
+xlabel('X'); ylabel('Y'); zlabel('Z');
+legend('Przestrzeń robocza', 'Punkt startowy', 'Punkt końcowy', 'Location', 'best');
 
-    % Wywołanie rysowania przestrzeni roboczej robota 
-    przestrzen_robocza;
+% Wyznaczenie punktów kontrolnych dla pełnej trasy
+controlPoints = zeros(8, 3); % 8 punktów kontrolnych: 2 dla prostych, 6 dla krzywej Béziera
 
-    % Włączenie "hold on" aby dodać nowe elementy do istniejącego wykresu
-    hold on;
+% Punkty prostych
+controlPoints(1, :) = startPoint; % Punkt początkowy (start prostej początkowej)
+controlPoints(2, :) = limitToWorkspace([(startPoint(1) + 200), startPoint(2), startPoint(3) + 100], 130.85, 930.85, 75, 1975); % Koniec prostej początkowej
+controlPoints(7, :) = limitToWorkspace([endPoint(1) - 200, endPoint(2), endPoint(3) - 100], 130.85, 930.85, 75, 1975); % Początek prostej końcowej
+controlPoints(8, :) = endPoint; % Punkt końcowy (koniec prostej końcowej)
 
-    % Rysowanie punktu startowego (zielony punkt)
-    scatter3(start_point(1), start_point(2), start_point(3), 50, 'g', 'filled'); 
+% Punkty krzywej Béziera
+controlPoints(3, :) = limitToWorkspace([(controlPoints(2, 1) + 100), controlPoints(2, 2) - 100, controlPoints(2, 3) + 300], 130.85, 930.85, 75, 1975); % Pierwszy punkt krzywej
+controlPoints(4, :) = limitToWorkspace((startPoint + endPoint) / 2 + [200, -200, 500], 130.85, 930.85, 75, 1975); % Środkowy punkt krzywej
+controlPoints(5, :) = limitToWorkspace((startPoint + endPoint) / 2 - [200, 200, 500], 130.85, 930.85, 75, 1975); % Środkowy punkt krzywej
+controlPoints(6, :) = limitToWorkspace([(controlPoints(7, 1) - 100), controlPoints(7, 2) + 100, controlPoints(7, 3) - 300], 130.85, 930.85, 75, 1975); % Ostatni punkt krzywej
 
-    % Rysowanie punktu końcowego (niebieski punkt)
-    scatter3(end_point(1), end_point(2), end_point(3), 50, 'b', 'filled');
+% Generowanie parametrów t od 0 do 1 dla krzywej Béziera
+t = linspace(0, 1, 100); % 100 punktów na krzywej
 
-    % Opcjonalne: dodanie legendy, opisów osi
-    xlabel('X'); ylabel('Y'); zlabel('Z');
-    legend('Przestrzeń robocza', 'Punkt startowy', 'Punkt końcowy', 'Location', 'best');
-
-    hold off;
-
-    
+% Obliczenie krzywej Béziera
+bezierCurve = zeros(length(t), 5);
+n = 5; % Stopień krzywej Béziera (5. stopnia, bo używamy 6 punktów kontrolnych)
+for i = 1:length(t)
+    bezierCurve(i, :) = zeros(1, 5); % Punkt na krzywej
+    for k = 0:n
+        % Współczynnik dwumianowy
+        coeff = nchoosek(n, k) * (t(i)^k) * ((1 - t(i))^(n - k));
+        bezierCurve(i, :) = bezierCurve(i, :) + coeff * controlPoints(k + 1, :); % Używamy punktów 3-6 (krzywa)
+    end
 end
+
+% Dodanie prostych na początku i końcu trasy
+% Prosta początkowa
+startLine = [linspace(startPoint(1), controlPoints(2, 1), 50)', ...
+             linspace(startPoint(2), controlPoints(2, 2), 50)', ...
+             linspace(startPoint(3), controlPoints(2, 3), 50)'];
+
+% Prosta końcowa
+endLine = [linspace(controlPoints(7, 1), endPoint(1), 50)', ...
+           linspace(controlPoints(7, 2), endPoint(2), 50)', ...
+           linspace(controlPoints(7, 3), endPoint(3), 50)'];
+
+% Rysowanie trasy
+hold on;
+plot3(startLine(:, 1), startLine(:, 2), startLine(:, 3), 'g-', 'LineWidth', 2); % Prosta początkowa
+plot3(bezierCurve(:, 1), bezierCurve(:, 2), bezierCurve(:, 3), 'b-', 'LineWidth', 2); % Krzywa Béziera
+plot3(endLine(:, 1), endLine(:, 2), endLine(:, 3), 'r-', 'LineWidth', 2); % Prosta końcowa
+
+% Rysowanie punktów kontrolnych
+plot3(controlPoints(:, 1), controlPoints(:, 2), controlPoints(:, 3), 'ro-', 'LineWidth', 1.5);
+scatter3(controlPoints(:, 1), controlPoints(:, 2), controlPoints(:, 3), 50, 'r', 'filled');
+
+% Ustawienia wykresu
+title('Trajektoria robota: Prosta - Krzywa - Prosta');
+legend({'Przestrzeń robocza', 'Punkt startowy', 'Punkt końcowy', ...
+        'Prosta początkowa', 'Krzywa Béziera', 'Prosta końcowa', ...
+        'Punkty kontrolne'}, 'Location', 'Best');
+axis equal;
+
+% Funkcja ograniczająca punkty kontrolne do przestrzeni roboczej
+function correctedPoint = limitToWorkspace(point, promien_wew, promien_zew, start_z, wysokosc_z)
+    % Oblicz promień w płaszczyźnie XY
+    r = sqrt(point(1)^2 + point(2)^2);
+
+    % Ograniczenie promienia do przestrzeni roboczej
+    if r < promien_wew
+        point(1:2) = point(1:2) * (promien_wew / r); % Skalowanie do wewnętrznego promienia
+    elseif r > promien_zew
+        point(1:2) = point(1:2) * (promien_zew / r); % Skalowanie do zewnętrznego promienia
+    end
+
+    % Ograniczenie wysokości Z
+    point(3) = max(start_z, min(point(3), wysokosc_z));
+
+    correctedPoint = point;
+end
+
+end
+
 
 
 function output = dynamicWorkspaceInput(text,defx,defy,defz)
