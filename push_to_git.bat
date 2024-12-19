@@ -2,7 +2,7 @@
 REM Skrypt do pushowania plikow do repozytorium matlab-opp-skur-po24-25
 
 REM Przejdz do katalogu projektu
-cd /d D:\1-Projekty\Domowe\MATLAB
+cd /d D:\1-Projekty\PolitechnikaOpolska\Sezon_5\SKUR\PROJEKT_MATLAB
 
 REM Dodaj wszystkie pliki, w tym zmodyfikowane i usuniete
 git add --all
