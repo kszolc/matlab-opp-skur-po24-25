@@ -11,7 +11,7 @@ function kinematykaProstaBackup()
     promien_zew = 930.85;  % Zewnętrzny promień walca
     promien_wew = 130.85;  % Wewnętrzny promień walca
     start_z = 75;          % Wysokość podstawy walca od osi Z
-    wysokosc = 1900;       % Wysokość walca
+    wysokosc = 1900;       % Wysokość walca (wartosć max z = 1975)
     q1_v_max =36;
     q2_v_max = 50;
     q3_v_max = 66.25;
